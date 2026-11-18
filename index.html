@@ -1,0 +1,551 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#edf3fc">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="해빗체커">
+<title>해빗체커</title>
+<style>
+:root{
+  --bg:#edf3fc; --card:#ffffff; --soft:#e6effd; --text:#0f1b33; --muted:#4a5875; --line:#d3def0;
+  --accent:#1d5fd6; --accent-ink:#ffffff; --ok:#1d8a52; --bad:#c62828;
+  --ex:#e03131; --ex-ink:#c92a2a; --rd:#f2b705; --rd-ink:#9a6200; --st:#1d5fd6; --st-ink:#1d5fd6; --ml:#2f9e44; --ml-ink:#237a35; --on-rd:#3a2a00;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#0a1222; --card:#111c31; --soft:#172642; --text:#e8eefb; --muted:#a3b3cf; --line:#243554;
+         --accent:#5c9cff; --accent-ink:#06142c; --ok:#3fbf7f; --bad:#f26d5b; color-scheme:dark;
+         --ex:#ff6b6b; --ex-ink:#ff8787; --rd:#ffd43b; --rd-ink:#ffd43b; --st:#5c9cff; --st-ink:#74a9ff; --ml:#51cf66; --ml-ink:#69db7c; }
+}
+:root[data-theme="dark"]{ --bg:#0a1222; --card:#111c31; --soft:#172642; --text:#e8eefb; --muted:#a3b3cf; --line:#243554;
+         --accent:#5c9cff; --accent-ink:#06142c; --ok:#3fbf7f; --bad:#f26d5b; color-scheme:dark;
+         --ex:#ff6b6b; --ex-ink:#ff8787; --rd:#ffd43b; --rd-ink:#ffd43b; --st:#5c9cff; --st-ink:#74a9ff; --ml:#51cf66; --ml-ink:#69db7c; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:860px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.sync{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.sync.err{color:var(--bad)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100% - 32px);z-index:20}
+.toast.on{opacity:1}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
+h1{font-size:20px;margin:0;font-weight:700;letter-spacing:-.01em;color:var(--accent)}
+header p{margin:2px 0 0;color:var(--muted);font-size:13px}
+h2{font-size:15px;font-weight:600;margin:0 0 14px}
+.date-nav{display:flex;align-items:center;gap:6px}
+input,select,button{font:inherit;color:inherit;font-size:14px}
+input,select{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px 10px;min-width:0}
+input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 15%,transparent)}
+button{border:1px solid var(--accent);border-radius:6px;padding:8px 16px;background:var(--accent);color:var(--accent-ink);cursor:pointer;font-weight:600}
+button:hover{filter:brightness(1.08)}
+button.ghost{background:var(--card);color:var(--text);border-color:var(--line)}
+button.ghost:hover{border-color:var(--accent);filter:none}
+button.del{background:transparent;border:0;color:var(--muted);padding:4px 8px;font-size:13px}
+button.del:hover{color:var(--bad);filter:none}
+.tabs{display:flex;overflow-x:auto;margin-bottom:20px;border-bottom:1px solid var(--line)}
+.tab{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;color:var(--muted);padding:10px 16px;white-space:nowrap;margin-bottom:-1px}
+.tab:hover{color:var(--text);filter:none}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.habit{background:var(--soft);border-radius:8px;padding:16px}
+.habit .top{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:14px;color:var(--accent)}
+.habit .val{font-size:22px;font-weight:700;margin:6px 0 2px;font-variant-numeric:tabular-nums}
+.habit .sub{color:var(--muted);font-size:12px}
+/* 습관별 색: 운동 빨강 · 독서 노랑 · 공부 파랑 · 식사 초록 */
+.h-ex{--c:var(--ex);--ci:var(--ex-ink)} .h-rd{--c:var(--rd);--ci:var(--rd-ink)}
+.h-st{--c:var(--st);--ci:var(--st-ink)} .h-ml{--c:var(--ml);--ci:var(--ml-ink)}
+.habit[class*="h-"]{background:color-mix(in srgb,var(--c) 11%,var(--card));border-top:3px solid var(--c)}
+.habit[class*="h-"] .top{color:var(--ci)}
+.habit[class*="h-"] .chk.ok{background:var(--c);border-color:var(--c)}
+.h-rd .chk.ok,.week .c-rd{color:var(--on-rd)}
+.tab[data-t="ex"],.wl-ex{color:var(--ex-ink)} .tab[data-t="rd"],.wl-rd{color:var(--rd-ink)}
+.tab[data-t="st"],.wl-st{color:var(--st-ink)} .tab[data-t="ml"],.wl-ml{color:var(--ml-ink)}
+.tab[data-t="ex"].on{border-bottom-color:var(--ex)} .tab[data-t="rd"].on{border-bottom-color:var(--rd)}
+.tab[data-t="st"].on{border-bottom-color:var(--st)} .tab[data-t="ml"].on{border-bottom-color:var(--ml)}
+.tab[data-t]:hover{opacity:.8}
+[class^="wl-"]{font-weight:600}
+.card>h2{color:var(--text);padding-left:10px;border-left:3px solid var(--accent);line-height:1.2}
+.bar{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:12px}
+.bar>i{display:block;height:100%;border-radius:99px;transition:width .3s}
+.chk{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;border:1.5px solid var(--line);color:transparent;background:var(--card)}
+.chk.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.form{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+.form label{display:flex;flex-direction:column;font-size:12px;color:var(--muted);gap:4px;flex:1 1 120px}
+.form label.wide{flex:2 1 200px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:500;font-size:12px}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.empty{color:var(--muted);text-align:center;padding:18px 0;font-size:14px}
+.week{display:grid;grid-template-columns:56px repeat(7,1fr);gap:4px;font-size:13px;align-items:center}
+.week .d{text-align:center;color:var(--muted);font-size:12px;line-height:1.3;padding-bottom:4px}
+.week .c{height:24px;border-radius:4px;background:var(--soft);display:grid;place-items:center;color:var(--accent-ink);font-size:11px}
+.streak{color:var(--muted);font-size:13px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0}
+.kpi div{font-size:12px;color:var(--muted);padding:2px 16px;border-left:1px solid var(--line)}
+.kpi div:first-child{border-left:0;padding-left:0}
+.kpi b{display:block;font-size:19px;font-weight:600;color:var(--text);margin-top:2px;font-variant-numeric:tabular-nums}
+.tabs{scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
+body{word-break:keep-all;overflow-wrap:break-word}
+td.num,th.num,.del,.tab{white-space:nowrap}
+.item-sub{display:block;color:var(--muted);font-size:12px;font-weight:400;margin-top:1px}
+@media (max-width:560px){
+  .wrap{padding-block:16px calc(48px + env(safe-area-inset-bottom,0px))}
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+  header{flex-direction:column;align-items:stretch;margin-bottom:12px;gap:10px}
+  .date-nav input{flex:1}
+  .tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--bg);margin:0 -16px 14px;padding:0 8px}
+  .tab{flex:1;padding:12px 2px;font-size:14px}
+  input,select{font-size:16px;padding:10px}
+  button{min-height:44px}
+  button.del{min-height:36px;padding:4px 6px}
+  .form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .form label.wide,.form>button{grid-column:1/-1}
+  .form.pair>button{grid-column:auto}
+  .form label>input,.form label>select{width:100%}
+  .grid{grid-template-columns:1fr 1fr;gap:8px}
+  .habit{padding:12px}.habit .val{font-size:19px}.habit .sub{font-size:11.5px}
+  .card{padding:16px;border-radius:8px}
+  th,td{padding:10px 4px}
+  .week{grid-template-columns:34px repeat(7,1fr);gap:3px;font-size:12px}
+  .week .d{font-size:11px}
+  .kpi{grid-template-columns:1fr 1fr;row-gap:12px}.kpi div{border-left:0;padding-left:0}}
+.hint{color:var(--muted);font-size:12px;margin-top:8px}
+.hidden{display:none}
+.total-row td{font-weight:700}
+</style>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="wrap">
+  <header>
+    <div><h1>해빗체커</h1><p>운동 · 독서 · 공부 · 식사 기록<span class="sync" id="syncStatus"></span></p></div>
+    <div class="date-nav">
+      <button class="ghost" id="prev">◀</button>
+      <input type="date" id="date">
+      <button class="ghost" id="next">▶</button>
+      <button class="ghost" id="today">오늘</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab on" data-t="home">홈</button>
+    <button class="tab" data-t="ex">운동</button>
+    <button class="tab" data-t="rd">독서</button>
+    <button class="tab" data-t="st">공부</button>
+    <button class="tab" data-t="ml">식사</button>
+    <button class="tab" data-t="set">설정</button>
+  </nav>
+
+  <!-- 대시보드 -->
+  <section id="home">
+    <div class="card">
+      <h2>오늘의 습관</h2>
+      <div class="grid" id="habits"></div>
+    </div>
+    <div class="card">
+      <h2>칼로리 밸런스</h2>
+      <div class="kpi" id="balance"></div>
+    </div>
+    <div class="card">
+      <h2>최근 7일</h2>
+      <div class="week" id="week"></div>
+      <div class="streak" id="streak"></div>
+    </div>
+  </section>
+
+  <!-- 운동 -->
+  <section id="ex" class="hidden">
+    <div class="card">
+      <h2>운동 기록 추가</h2>
+      <div class="form pair">
+        <label class="wide">운동 종류<select id="exType"></select></label>
+        <label>시간(분)<input type="number" id="exMin" min="1" value="30"></label>
+        <button id="exAdd">추가</button>
+      </div>
+      <p class="hint">소모 칼로리 = MET × 체중(kg) × 시간(h). 체중은 설정 탭의 값을 씁니다.</p>
+    </div>
+    <div class="card"><table id="exTable"></table></div>
+  </section>
+
+  <!-- 독서 -->
+  <section id="rd" class="hidden">
+    <div class="card">
+      <h2>독서 기록 추가</h2>
+      <div class="form">
+        <label class="wide">책 제목<input id="rdTitle" placeholder="예: 데미안"></label>
+        <label>쪽수<input type="number" id="rdPages" min="0" value="20"></label>
+        <label>시간(분)<input type="number" id="rdMin" min="0" value="30"></label>
+        <button id="rdAdd">추가</button>
+      </div>
+    </div>
+    <div class="card"><table id="rdTable"></table></div>
+  </section>
+
+  <!-- 공부 -->
+  <section id="st" class="hidden">
+    <div class="card">
+      <h2>공부 기록 추가</h2>
+      <div class="form pair">
+        <label class="wide">과목/내용<input id="stSub" placeholder="예: 영어 단어"></label>
+        <label>시간(분)<input type="number" id="stMin" min="1" value="60"></label>
+        <button id="stAdd">추가</button>
+      </div>
+      <div class="form pair" style="margin-top:12px">
+        <label>타이머<input id="timerView" value="00:00:00" readonly></label>
+        <button class="ghost" id="timerBtn">▶ 시작</button>
+        <button class="ghost" id="timerSave">기록으로 저장</button>
+      </div>
+    </div>
+    <div class="card"><table id="stTable"></table></div>
+  </section>
+
+  <!-- 식사 -->
+  <section id="ml" class="hidden">
+    <div class="card">
+      <h2>식사 기록 추가</h2>
+      <div class="form">
+        <label class="wide">음식<select id="mlFood"></select></label>
+        <label>끼니<select id="mlMeal"><option>아침</option><option>점심</option><option>저녁</option><option>간식</option></select></label>
+        <label>인분<input type="number" id="mlQty" min="0.25" step="0.25" value="1"></label>
+        <button id="mlAdd">추가</button>
+      </div>
+      <div class="form pair" id="customBox" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+        <label class="wide">직접 입력 – 음식 이름<input id="mlName" placeholder="목록에 없는 음식"></label>
+        <label>칼로리(kcal)<input type="number" id="mlKcal" min="0" placeholder="1인분 kcal"></label>
+        <button class="ghost" id="mlCustom">직접 추가</button>
+      </div>
+      <p class="hint">칼로리는 일반적인 1인분 기준 대략값입니다.</p>
+    </div>
+    <div class="card"><table id="mlTable"></table></div>
+  </section>
+
+  <!-- 설정 -->
+  <section id="set" class="hidden">
+    <div class="card">
+      <h2>프로필 (칼로리 계산용)</h2>
+      <div class="form">
+        <label>성별<select id="pSex"><option value="m">남성</option><option value="f">여성</option></select></label>
+        <label>나이<input type="number" id="pAge" min="10"></label>
+        <label>키(cm)<input type="number" id="pH" min="100"></label>
+        <label>체중(kg)<input type="number" id="pW" min="20" step="0.1"></label>
+        <label class="wide">활동량<select id="pAct">
+          <option value="1.2">거의 안 움직임 (사무직)</option>
+          <option value="1.375">가벼운 활동 (주 1~3회 운동)</option>
+          <option value="1.55">보통 활동 (주 3~5회 운동)</option>
+          <option value="1.725">많은 활동 (주 6~7회 운동)</option>
+        </select></label>
+      </div>
+      <div class="kpi" id="bmrView"></div>
+      <p class="hint">기초대사량은 Mifflin-St Jeor 공식으로 계산하고, 권장 섭취량 = 기초대사량 × 활동계수입니다.</p>
+    </div>
+    <div class="card">
+      <h2>하루 목표</h2>
+      <div class="form">
+        <label>운동(분)<input type="number" id="gEx" min="0"></label>
+        <label>독서(분)<input type="number" id="gRd" min="0"></label>
+        <label>공부(분)<input type="number" id="gSt" min="0"></label>
+        <label>섭취 칼로리 목표(kcal)<input type="number" id="gKcal" min="0" placeholder="비우면 권장량"></label>
+      </div>
+      <p class="hint">식사 습관은 섭취량이 목표의 ±10% 안이면 달성으로 체크됩니다.</p>
+    </div>
+    <div class="card">
+      <h2>데이터</h2>
+      <div class="form">
+        <button class="ghost" id="exportBtn">백업 파일 저장</button>
+        <label class="wide">백업 불러오기<input type="file" id="importFile" accept=".json"></label>
+        <button class="ghost" id="resetBtn" style="color:var(--bad)">전체 초기화</button>
+      </div>
+      <p class="hint">링크로 열면 claude.ai 계정에 자동 저장되고 본인만 볼 수 있습니다. 파일로 직접 열면 그 브라우저에만 저장됩니다.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+const EXERCISES = [
+  ["걷기 (보통 속도)",3.5],["빠르게 걷기",4.3],["조깅",7.0],["달리기 (10km/h)",9.8],
+  ["자전거 (보통)",6.8],["실내 자전거",7.0],["수영 (자유형 보통)",8.3],["줄넘기",11.0],
+  ["등산",6.5],["계단 오르기",8.0],["웨이트 트레이닝",5.0],["맨몸 운동 (스쿼트·푸시업)",3.8],
+  ["요가",2.5],["필라테스",3.0],["스트레칭",2.3],["배드민턴",5.5],["탁구",4.0],
+  ["테니스",7.3],["축구",7.0],["농구",6.5],["댄스",5.0],["홈트 (고강도 HIIT)",8.0]
+];
+const FOODS = [
+  ["쌀밥 1공기 (210g)",310],["현미밥 1공기",300],["김밥 1줄",320],["라면 1개",500],
+  ["김치찌개 1인분",250],["된장찌개 1인분",180],["비빔밥",550],["불고기 1인분",400],
+  ["제육볶음 1인분",450],["삼겹살 1인분 (200g)",660],["치킨 반마리 (후라이드)",1000],
+  ["짜장면",700],["짬뽕",690],["돈가스",800],["떡볶이 1인분",480],["샌드위치",350],
+  ["햄버거 세트",900],["피자 2조각",560],["샐러드 (드레싱 포함)",200],["닭가슴살 100g",110],
+  ["삶은 계란 1개",75],["두부 반모",160],["바나나 1개",90],["사과 1개",110],
+  ["우유 1잔 (200ml)",130],["요거트 1개",100],["아메리카노",10],["카페라떼",190],
+  ["콜라 1캔",140],["맥주 500ml",230],["소주 1병",400],["과자 1봉지",500],["아이스크림 1개",250]
+];
+const KEY = "habitChecker.v1";
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,"0");
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+let state = load();
+let cur = ymd(new Date());
+
+function load(){
+  let s=null;
+  try{ s = JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+  return Object.assign({
+    profile:{sex:"m",age:30,h:170,w:65,act:1.375},
+    goals:{ex:30,rd:30,st:60,kcal:""},
+    days:{}
+  }, s||{});
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+/* 저장소: 링크(claude.ai)로 열면 계정 저장소, 아니면 이 브라우저 */
+let store=null;
+const STATUS={local:"이 브라우저에 저장됩니다",loading:"기록을 불러오는 중…",slow:"저장소에 연결하지 못했습니다. 화면이 최신이 아닐 수 있습니다",ok:"계정에 자동 저장됨",err:"저장하지 못했습니다. 연결을 확인하세요"};
+function setStatus(k){const el=$("syncStatus");el.textContent=STATUS[k];el.classList.toggle("err",k==="err"||k==="slow");}
+let toastT;
+function notice(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),2500);}
+const writing={},again={};
+async function queueWrite(id,getData){
+  if(writing[id]){again[id]=getData;return;}
+  writing[id]=true;
+  try{await store.col.doc(id).set(JSON.parse(JSON.stringify(getData())));setStatus("ok");}
+  catch(e){setStatus("err");}
+  writing[id]=false;
+  if(again[id]){const g=again[id];delete again[id];queueWrite(id,g);}
+}
+function persistDay(d){ if(store) queueWrite("d-"+d,()=>peek(d)); else save(); }
+function persistSettings(){ if(store) queueWrite("settings",()=>({profile:state.profile,goals:state.goals})); else save(); }
+async function connectStore(){
+  if(!(window.claude&&claude.use)){setStatus("local");return;}
+  setStatus("loading");
+  const [db,user]=await Promise.all([claude.use("db"),claude.use("user")]);
+  const uid=user?await user.id():null;
+  if(!db||!uid){setStatus("local");return;}
+  store={col:db.collection("data/users/"+uid)};
+  state.days={};
+  const slow=setTimeout(()=>setStatus("slow"),10000);
+  store.col.onSnapshot(snap=>{
+    const days={};let settings=null;
+    snap.docs.forEach(doc=>{
+      const v=doc.data()||{};
+      if(doc.id==="settings")settings=v;
+      else if(doc.id.startsWith("d-"))days[doc.id.slice(2)]={ex:[...(v.ex||[])],rd:[...(v.rd||[])],st:[...(v.st||[])],ml:[...(v.ml||[])]};
+    });
+    state.days=days;
+    if(settings){state.profile={...state.profile,...settings.profile};state.goals={...state.goals,...settings.goals};}
+    if(!snap.metadata.fromCache){clearTimeout(slow);if(!Object.values(writing).some(Boolean))setStatus("ok");}
+    render();
+  },()=>{clearTimeout(slow);setStatus("err");});
+}
+function day(d=cur){
+  if(!state.days[d]) state.days[d]={ex:[],rd:[],st:[],ml:[]};
+  return state.days[d];
+}
+function peek(d){ return state.days[d] || {ex:[],rd:[],st:[],ml:[]}; }
+const sum = (arr,k) => arr.reduce((a,b)=>a+(+b[k]||0),0);
+
+function bmr(){
+  const p=state.profile;
+  return Math.round(10*p.w + 6.25*p.h - 5*p.age + (p.sex==="m"?5:-161));
+}
+function tdee(){ return Math.round(bmr()*state.profile.act); }
+function kcalGoal(){ return +state.goals.kcal || tdee(); }
+
+function status(d){
+  const x=peek(d), g=state.goals;
+  const exM=sum(x.ex,"min"), rdM=sum(x.rd,"min"), stM=sum(x.st,"min"), kc=sum(x.ml,"kcal");
+  const kg=kcalGoal();
+  return {
+    exM,rdM,stM,kc,kg,burn:sum(x.ex,"kcal"),pages:sum(x.rd,"pages"),
+    ex: g.ex>0 && exM>=g.ex,
+    rd: g.rd>0 && rdM>=g.rd,
+    st: g.st>0 && stM>=g.st,
+    ml: x.ml.length>0 && Math.abs(kc-kg)<=kg*0.1
+  };
+}
+
+/* ---------- 렌더링 ---------- */
+function render(){
+  $("date").value=cur;
+  const s=status(cur), g=state.goals;
+  const cards=[
+    ["ex","운동",`${s.exM}분`,`목표 ${g.ex}분 · 소모 ${Math.round(s.burn)} kcal`,s.exM/(g.ex||1),"--ex"],
+    ["rd","독서",`${s.rdM}분`,`목표 ${g.rd}분 · ${s.pages}쪽`,s.rdM/(g.rd||1),"--rd"],
+    ["st","공부",`${s.stM}분`,`목표 ${g.st}분`,s.stM/(g.st||1),"--st"],
+    ["ml","식사",`${Math.round(s.kc)} kcal`,`목표 ${s.kg} kcal (±10%)`,s.kc/(s.kg||1),"--ml"]
+  ];
+  $("habits").innerHTML=cards.map(([k,t,v,sub,p,c])=>`
+    <div class="habit h-${k}">
+      <div class="top">${t}<span class="chk ${s[k]?"ok":""}">✓</span></div>
+      <div class="val">${v}</div><div class="sub">${sub}</div>
+      <div class="bar"><i style="width:${Math.min(100,p*100)}%;background:var(${k==="ml"&&p>1.1?"--bad":c})"></i></div>
+    </div>`).join("");
+
+  const net=Math.round(s.kc - s.burn);
+  const diff=Math.round(s.kc - s.burn - tdee());
+  $("balance").innerHTML=`
+    <div>섭취<b>${Math.round(s.kc)} kcal</b></div>
+    <div>운동 소모<b>${Math.round(s.burn)} kcal</b></div>
+    <div>순 섭취<b>${net} kcal</b></div>
+    <div>권장량(TDEE)<b>${tdee()} kcal</b></div>
+    <div>차이<b style="color:${diff>0?"var(--bad)":"var(--rd)"}">${diff>0?"+":""}${diff} kcal</b></div>`;
+
+  renderWeek(); renderLists(); renderSettings();
+}
+
+function renderWeek(){
+  const base=new Date(cur+"T00:00:00");
+  const days=[...Array(7)].map((_,i)=>{const d=new Date(base);d.setDate(d.getDate()-6+i);return d;});
+  const wd="일월화수목금토";
+  let h=`<div></div>`+days.map(d=>`<div class="d">${d.getMonth()+1}/${d.getDate()}<br>${wd[d.getDay()]}</div>`).join("");
+  [["ex","운동","--ex"],["rd","독서","--rd"],["st","공부","--st"],["ml","식사","--ml"]].forEach(([k,n,c])=>{
+    h+=`<div class="wl-${k}">${n}</div>`+days.map(d=>{const ok=status(ymd(d))[k];return `<div class="c c-${k}" style="${ok?`background:var(${c})`:""}">${ok?"✓":""}</div>`}).join("");
+  });
+  $("week").innerHTML=h;
+
+  const names={ex:"운동",rd:"독서",st:"공부",ml:"식사"};
+  $("streak").textContent="연속 달성: "+Object.keys(names).map(k=>{
+    let n=0;const d=new Date(base);
+    while(status(ymd(d))[k]){n++;d.setDate(d.getDate()-1);}
+    return `${names[k]} ${n}일`;
+  }).join(" · ");
+}
+
+function table(id,head,rows,total){
+  const el=$(id);
+  if(!rows.length){el.innerHTML=`<tr><td class="empty">이 날짜의 기록이 없습니다.</td></tr>`;return;}
+  el.innerHTML=`<tr>${head.map(([t,n])=>`<th class="${n?"num":""}">${t}</th>`).join("")}<th></th></tr>`+
+    rows.join("")+(total||"");
+}
+function renderLists(){
+  const x=peek(cur);
+  table("exTable",[["운동"],["소모 kcal",1]],
+    x.ex.map((r,i)=>`<tr><td>${esc(r.name)}<span class="item-sub">${r.min}분</span></td><td class="num">${Math.round(r.kcal)}</td><td class="num"><button class="del" data-k="ex" data-i="${i}">삭제</button></td></tr>`),
+    `<tr class="total-row"><td>합계<span class="item-sub">${sum(x.ex,"min")}분</span></td><td class="num">${Math.round(sum(x.ex,"kcal"))}</td><td></td></tr>`);
+  table("rdTable",[["책"],["쪽수",1],["시간",1]],
+    x.rd.map((r,i)=>`<tr><td>${esc(r.title)}</td><td class="num">${r.pages}쪽</td><td class="num">${r.min}분</td><td class="num"><button class="del" data-k="rd" data-i="${i}">삭제</button></td></tr>`),
+    `<tr class="total-row"><td>합계</td><td class="num">${sum(x.rd,"pages")}쪽</td><td class="num">${sum(x.rd,"min")}분</td><td></td></tr>`);
+  table("stTable",[["과목/내용"],["시간",1]],
+    x.st.map((r,i)=>`<tr><td>${esc(r.sub)}</td><td class="num">${r.min}분</td><td class="num"><button class="del" data-k="st" data-i="${i}">삭제</button></td></tr>`),
+    `<tr class="total-row"><td>합계</td><td class="num">${sum(x.st,"min")}분</td><td></td></tr>`);
+  const order=["아침","점심","저녁","간식"];
+  const ml=x.ml.map((r,i)=>({...r,i})).sort((a,b)=>order.indexOf(a.meal)-order.indexOf(b.meal));
+  table("mlTable",[["음식"],["kcal",1]],
+    ml.map(r=>`<tr><td>${esc(r.name)}<span class="item-sub">${r.meal} · ${r.qty}인분</span></td><td class="num">${Math.round(r.kcal)}</td><td class="num"><button class="del" data-k="ml" data-i="${r.i}">삭제</button></td></tr>`),
+    `<tr class="total-row"><td>합계<span class="item-sub">목표 ${kcalGoal()} kcal</span></td><td class="num">${Math.round(sum(x.ml,"kcal"))}</td><td></td></tr>`);
+}
+function renderSettings(){
+  const p=state.profile,g=state.goals;
+  $("pSex").value=p.sex;$("pAge").value=p.age;$("pH").value=p.h;$("pW").value=p.w;$("pAct").value=String(p.act);
+  $("gEx").value=g.ex;$("gRd").value=g.rd;$("gSt").value=g.st;$("gKcal").value=g.kcal;
+  $("bmrView").innerHTML=`<div>기초대사량<b>${bmr()} kcal</b></div><div>권장 섭취량<b>${tdee()} kcal</b></div><div>적용 중인 목표<b>${kcalGoal()} kcal</b></div>`;
+}
+
+/* ---------- 이벤트 ---------- */
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));
+  document.querySelectorAll("section").forEach(s=>s.classList.toggle("hidden",s.id!==b.dataset.t));
+});
+const shift=n=>{const d=new Date(cur+"T00:00:00");d.setDate(d.getDate()+n);cur=ymd(d);render();};
+$("prev").onclick=()=>shift(-1); $("next").onclick=()=>shift(1);
+$("today").onclick=()=>{cur=ymd(new Date());render();};
+$("date").onchange=e=>{if(e.target.value){cur=e.target.value;render();}};
+
+$("exType").innerHTML=EXERCISES.map(([n,m],i)=>`<option value="${i}">${n} (MET ${m})</option>`).join("");
+$("mlFood").innerHTML=FOODS.map(([n,k],i)=>`<option value="${i}">${n} – ${k} kcal</option>`).join("");
+
+const commit=()=>{persistDay(cur);render();};
+const commitSettings=()=>{persistSettings();render();};
+$("exAdd").onclick=()=>{
+  const [name,met]=EXERCISES[$("exType").value], min=+$("exMin").value;
+  if(!(min>0))return notice("시간을 입력하세요.");
+  day().ex.push({name,min,kcal:met*state.profile.w*min/60}); commit();
+};
+$("rdAdd").onclick=()=>{
+  const title=$("rdTitle").value.trim()||"(제목 없음)", pages=+$("rdPages").value||0, min=+$("rdMin").value||0;
+  if(!pages&&!min)return notice("쪽수나 시간을 입력하세요.");
+  day().rd.push({title,pages,min}); $("rdTitle").value=""; commit();
+};
+$("stAdd").onclick=()=>{
+  const sub=$("stSub").value.trim()||"공부", min=+$("stMin").value;
+  if(!(min>0))return notice("시간을 입력하세요.");
+  day().st.push({sub,min}); $("stSub").value=""; commit();
+};
+$("mlAdd").onclick=()=>{
+  const [name,k]=FOODS[$("mlFood").value], qty=+$("mlQty").value||1;
+  day().ml.push({meal:$("mlMeal").value,name,qty,kcal:k*qty}); commit();
+};
+$("mlCustom").onclick=()=>{
+  const name=$("mlName").value.trim(), k=+$("mlKcal").value, qty=+$("mlQty").value||1;
+  if(!name||!(k>=0)||$("mlKcal").value==="")return notice("음식 이름과 칼로리를 입력하세요.");
+  day().ml.push({meal:$("mlMeal").value,name,qty,kcal:k*qty});
+  $("mlName").value="";$("mlKcal").value=""; commit();
+};
+document.addEventListener("click",e=>{
+  const b=e.target.closest(".del"); if(!b)return;
+  day()[b.dataset.k].splice(+b.dataset.i,1); commit();
+});
+
+["pSex","pAge","pH","pW","pAct"].forEach(id=>$(id).onchange=()=>{
+  state.profile={sex:$("pSex").value,age:+$("pAge").value||30,h:+$("pH").value||170,w:+$("pW").value||65,act:+$("pAct").value};
+  commitSettings();
+});
+["gEx","gRd","gSt","gKcal"].forEach(id=>$(id).onchange=()=>{
+  state.goals={ex:+$("gEx").value||0,rd:+$("gRd").value||0,st:+$("gSt").value||0,kcal:$("gKcal").value===""?"":+$("gKcal").value};
+  commitSettings();
+});
+
+/* 공부 타이머 */
+let tStart=null,tAcc=0,tInt=null;
+const tFmt=ms=>{const s=Math.floor(ms/1000);return `${pad(Math.floor(s/3600))}:${pad(Math.floor(s%3600/60))}:${pad(s%60)}`;};
+const tNow=()=>tAcc+(tStart?Date.now()-tStart:0);
+$("timerBtn").onclick=()=>{
+  if(tStart){tAcc+=Date.now()-tStart;tStart=null;clearInterval(tInt);$("timerBtn").textContent="▶ 시작";}
+  else{tStart=Date.now();tInt=setInterval(()=>$("timerView").value=tFmt(tNow()),500);$("timerBtn").textContent="⏸ 일시정지";}
+};
+$("timerSave").onclick=()=>{
+  const min=Math.round(tNow()/60000);
+  if(min<1)return notice("1분 이상 측정해야 저장할 수 있습니다.");
+  day().st.push({sub:$("stSub").value.trim()||"타이머 공부",min});
+  tStart=null;tAcc=0;clearInterval(tInt);$("timerView").value="00:00:00";$("timerBtn").textContent="▶ 시작";
+  commit();
+};
+
+/* 백업 */
+$("exportBtn").onclick=async()=>{
+  const data=JSON.stringify(state,null,2), filename=`habit-backup-${ymd(new Date())}.json`;
+  const dl=(window.claude&&claude.use)?await claude.use("downloads"):null;
+  if(dl){
+    try{await dl.save({filename,data});notice("백업 파일을 저장했습니다.");}
+    catch(e){notice("백업 파일을 저장하지 않았습니다.");}
+    return;
+  }
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([data],{type:"application/json"}));
+  a.download=filename;a.click();
+};
+$("importFile").onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  f.text().then(t=>{
+    let s;try{s=JSON.parse(t);if(!s||!s.days)throw 0;}catch(_){notice("올바른 백업 파일이 아닙니다.");return;}
+    state.profile={...state.profile,...s.profile};state.goals={...state.goals,...s.goals};
+    state.days={...state.days,...s.days};
+    persistSettings();Object.keys(s.days).forEach(persistDay);
+    render();notice("백업을 불러왔습니다.");e.target.value="";
+  });
+};
+let resetArmed=0;
+$("resetBtn").onclick=()=>{
+  const b=$("resetBtn");
+  if(Date.now()-resetArmed>4000){
+    resetArmed=Date.now();b.textContent="한 번 더 누르면 모두 삭제";
+    setTimeout(()=>{if(Date.now()-resetArmed>=4000)b.textContent="전체 초기화";},4100);
+    return;
+  }
+  resetArmed=0;b.textContent="전체 초기화";
+  const ds=Object.keys(state.days);state.days={};
+  if(store)ds.forEach(d=>store.col.doc("d-"+d).delete().catch(()=>setStatus("err")));else save();
+  render();notice("모든 기록을 삭제했습니다.");
+};
+
+render();
+connectStore();
+</script>
